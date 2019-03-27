@@ -31,6 +31,7 @@ No further changes are planned right now, but pull requests are welcome.
 
 ## Test & Develop
 
+### Vagrant Testing
 You can use the supplied Vagrantfile to test tcgui quickly. Vagrant will setup two machines, sender (192.168.210.2) and a receiver (192.168.210.3):
 
 	vagrant up
@@ -53,3 +54,18 @@ Send a packet stream from the sender to the receiver:
 
 Now access the GUI at http://192.168.210.2:5000/ and change the rate of interface eth1. You should see the sending/receiving rate to decrease to the set amount.
 
+### Mac Setup
+- For one computer as Mac OSX and another as Linux Ubuntu 16.04 (virtual machine)
+```
+$ brew install iperf3
+$ brew install pip
+$ pip3 install Flask
+```
+- In one terminal for Mac OSX, act a sender with commands:
+```
+$ sudo python3 main.py --ip 0.0.0.0 --debug
+```
+- In another terminal for Mac OSX
+```
+$ iperf3 -c ip -t 300
+```
