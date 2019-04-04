@@ -80,16 +80,59 @@ for ka, va in dictjson.items():
                 connectedlist = values
                 logging.debug(connectedlist)
                 for conndict in values:
-                    output_conndict_keys = sheet2.insert_row(list(conndict.keys()),1)
-                    output_conndict_values = sheet2.insert_row(list(conndict.values()),2)
+                    # output_conndict_keys = sheet2.insert_row(list(conndict.keys()),1)
+                    # output_conndict_values = sheet2.insert_row(list(conndict.values()),2)
+                    cell_list_keys = sheet2.range('A1:E1')
+                    for cell, item in zip(cell_list_keys, list(conndict.keys())):
+                        cell.value = item
+                    sheet2.update_cells(cell_list_keys)
+
+                    cell_list_values = sheet2.range('A2:E2')
+                    for cell, item in zip(cell_list_values, list(conndict.values())):
+                        cell.value = item
+                    sheet2.update_cells(cell_list_values)
+            
             if (key == 'sum_sent'):
                 sumsent = values
                 logging.debug(sumsent)
-                output_sum_sent_keys = sheet2.insert_row(list(values.keys()),3)
-                output_sum_sent_values = sheet2.insert_row(list(values.values()),4)
+                # output_sum_sent_keys = sheet2.insert_row(list(values.keys()),3)
+                # output_sum_sent_values = sheet2.insert_row(list(values.values()),4)
+                cell_list_keys = sheet2.range('A3:E3')
+                for cell, item in zip(cell_list_keys, list(values.keys())):
+                    cell.value = item
+                sheet2.update_cells(cell_list_keys)
+
+                cell_list_values = sheet2.range('A4:E4')
+                for cell, item in zip(cell_list_values, list(values.values())):
+                    cell.value = item
+                sheet2.update_cells(cell_list_values)
+
             if (key == 'sum_received'):
-                output_sum_received_keys = sheet2.insert_row(list(values.keys()),5)
-                output_sum_received_values = sheet2.insert_row(list(values.values()),6)
+                # output_sum_received_keys = sheet2.insert_row(list(values.keys()),5)
+                # output_sum_received_values = sheet2.insert_row(list(values.values()),6)
+                logging.debug(list(values.keys()))
+                cell_list_keys = sheet2.range('A5:E5')
+                for cell, item in zip(cell_list_keys, list(values.keys())):
+                    cell.value = item
+                sheet2.update_cells(cell_list_keys)
+
+                cell_list_values = sheet2.range('A6:E6')
+                for cell, item in zip(cell_list_values, list(values.values())):
+                    cell.value = item
+                sheet2.update_cells(cell_list_values)
+
+                # sheet2.values().update(
+                #     'sheet2!A17:C17',
+                #     params={
+                #         'valueInputOption': 'USER_ENTERED'
+                #     },
+                #     body={
+                #         'values': list(values.values())
+                #     }
+                # )
+                # for cell in cell_list:
+                #     cell.value = list(values.keys())
+
                 # for k,v in values.items():
                 #     # sumreceived = k
                 #     x = []
