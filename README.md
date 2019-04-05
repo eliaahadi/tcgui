@@ -42,7 +42,7 @@ Afterwards connect to the sender and start the GUI:
 	cd /vagrant
 	sudo python3 main.py --ip 0.0.0.0 --debug
 
-Start a receiver in the receiving VM:
+Start a receiver in the receiving VM or other machine:
 
 	vagrant ssh receiver
 	iperf3 -s
@@ -51,7 +51,8 @@ Send a packet stream from the sender to the receiver:
 
 	vagrant ssh sender
 	iperf3 -c 192.168.210.3 -t 300
-
+    OR
+    iperf3 -c 13.231.255.238 -t 30
 Now access the GUI at http://192.168.210.2:5000/ and change the rate of interface eth1. You should see the sending/receiving rate to decrease to the set amount.
 
 ### Mac Setup
@@ -68,4 +69,8 @@ $ sudo python3 main.py --ip 0.0.0.0 --debug
 - In another terminal for Mac OSX
 ```
 $ iperf3 -c ip -t 300
+$ iperf3 -c 192.168.5.166 -t 3 -J
+$ iperf3 -c 192.168.5.166 -t 3 -J -u 5M
 ```
+
+# add json from iperf3 into logfile/google sheets

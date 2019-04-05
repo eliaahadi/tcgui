@@ -1,6 +1,9 @@
 import subprocess, os, re, argparse
 from flask import Flask, render_template, redirect, request, url_for
-
+import logging
+import logging.config
+from gsheet import cli_args
+logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
 
 app = Flask(__name__)
 pattern = None
@@ -29,6 +32,7 @@ def main():
 
 @app.route('/new_rule/<interface>', methods=['POST'])
 def new_rule(interface):
+    logging.info("new rule interface %s ", interface)
     delay = request.form['Delay']
     delay_variance = request.form['DelayVariance']
     loss = request.form['Loss']
@@ -46,7 +50,11 @@ def new_rule(interface):
     proc.wait()
 
     # apply new setup
-    command = 'tc qdisc add dev %s root netem' % interface
+    logging.info("gsheet args -> %s", cli_args)
+    if (cli_args.New_Value):
+        command = 'tc qdisc add dev %s root netem' % interface
+    else:
+        command = 'tc qdisc add dev %s root netem' % interface
     if rate != '':
         command += ' rate %smbit' % rate
     if delay != '':
@@ -65,7 +73,7 @@ def new_rule(interface):
             command += ' %s%%' % reorder_correlation
     if corrupt != '':
         command += ' corrupt %s%%' % corrupt
-    print(command)
+    logging.info("command call ---> %s ", command)
     command = command.split(' ')
     proc = subprocess.Popen(command)
     proc.wait()
@@ -84,6 +92,7 @@ def remove_rule(interface):
 
 def get_active_rules():
     proc = subprocess.Popen(['tc', 'qdisc'], stdout=subprocess.PIPE)
+    logging.debug("get active rules -> %s", proc)
     output = proc.communicate()[0].decode()
     lines = output.split('\n')[:-1]
     rules = []
@@ -94,6 +103,7 @@ def get_active_rules():
         if rule['name'] and rule['name'] not in dev:
             rules.append(rule)
             dev.add(rule['name'])
+    logging.info('\n \n ACTIVE RULES show -> %s', rules)
     return rules
 
 
@@ -146,7 +156,7 @@ def parse_rule(split_rule):
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
-        print("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
+        logging.info("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
         exit(1)
     args = parse_arguments()
     if args.regex:
