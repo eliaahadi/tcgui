@@ -2,7 +2,7 @@ import subprocess, os, re, argparse
 from flask import Flask, render_template, redirect, request, url_for
 import logging
 import logging.config
-from gsheet import cli_args
+# from gsheet import cli_args
 logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
 
 app = Flask(__name__)
@@ -50,11 +50,7 @@ def new_rule(interface):
     proc.wait()
 
     # apply new setup
-    logging.info("gsheet args -> %s", cli_args)
-    if (cli_args.New_Value):
-        command = 'tc qdisc add dev %s root netem' % interface
-    else:
-        command = 'tc qdisc add dev %s root netem' % interface
+    command = 'tc qdisc add dev %s root netem' % interface
     if rate != '':
         command += ' rate %smbit' % rate
     if delay != '':
@@ -73,7 +69,7 @@ def new_rule(interface):
             command += ' %s%%' % reorder_correlation
     if corrupt != '':
         command += ' corrupt %s%%' % corrupt
-    logging.info("command call ---> %s ", command)
+    print(command)
     command = command.split(' ')
     proc = subprocess.Popen(command)
     proc.wait()
