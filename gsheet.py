@@ -14,9 +14,11 @@ logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
 #     logging.debug("tcgui rules -> %s ", get_active_rules)
 
 class Iperf3toGoogleSheets:
-    def __init__(self, name='None', input_value=0):
+    def __init__(self, name=None, input_value=0,delay="0ms"):
         self.name = name
         self.input_value = input_value
+        self.delay = delay
+        self.sheet = ""
 
 
     def setup(self):
@@ -25,9 +27,11 @@ class Iperf3toGoogleSheets:
         creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
         client = gspread.authorize(creds)
 
-        sheet1 = client.open("networkstats").sheet1
-        sheet2 = client.open("networkstats").get_worksheet(1)
-        return sheet2
+        # sheet1 = client.open("networkstats").sheet1
+        self.sheet = client.open("networkstats").get_worksheet(1)
+        # logging.debug("sheet info", self.sheet)
+        # return self.sheet
+
 
 
     def iperf3_command_tcp(self):
@@ -51,8 +55,21 @@ class Iperf3toGoogleSheets:
         # logging.debug("udp -> %s", dictjson)
         return dictjson
 
+    def tc_delay_command(self):
+        try:
+            self.delay
+        except TypeError:
+            self.delay = '0ms'
+        
+        result = subprocess.run(["sudo", "tc", "qdisc", "add", "dev", "enp4s0", "root", "netem", "delay", "0ms"],stdout=subprocess.PIPE)
+        result = subprocess.run(["sudo", "tc", "qdisc", "change", "dev", "enp4s0", "root", "netem", "delay", self.delay],stdout=subprocess.PIPE)
 
-    def connected(self, setup):
+        # tc_dictjson = json.JSONDecoder().decode(result.stdout.decode('utf-8'))
+        # logging.debug("udp -> %s", dictjson)
+        # return tc_dictjson
+
+    def connected(self):
+        self.tc_delay_command()
         for ka, va in self.iperf3_command_tcp().items():
             logging.debug(type(ka)) #str
             logging.debug(type(va)) #dict
@@ -66,19 +83,20 @@ class Iperf3toGoogleSheets:
                         connectedlist = values
                         logging.debug(connectedlist)
                         for conndict in values:
-                            cell_list_keys = setup.range('B2:F2')
-                            cell_list_values = setup.range('B3:F3')
+                            cell_list_keys = self.sheet.range('B2:F2')
+                            cell_list_values = self.sheet.range('B3:F3')
 
                             for cell, item in zip(cell_list_keys, list(conndict.keys())):
                                 cell.value = item
-                            setup.update_cells(cell_list_keys)
+                            self.sheet.update_cells(cell_list_keys)
                             for cell, item in zip(cell_list_values, list(conndict.values())):
                                 cell.value = item
-                            setup.update_cells(cell_list_values)
+                            self.sheet.update_cells(cell_list_values)
 
 
-    def data_manipulation_tcp(self, setup):
+    def data_manipulation_tcp(self):
         # iperf3_command()
+        # self.connected()
         for ka, va in self.iperf3_command_tcp().items():
             logging.debug(type(ka)) #str
             logging.debug(type(va)) #dict
@@ -97,25 +115,25 @@ class Iperf3toGoogleSheets:
                         logging.debug(values)
 
                         if (self.name == 'Rate' and self.input_value == '1M'):
-                            cell_list_keys = setup.range('B10:F10')
-                            cell_list_values = setup.range('B11:F11')
+                            cell_list_keys = self.sheet.range('B10:F10')
+                            cell_list_values = self.sheet.range('B11:F11')
                         elif (self.name == 'Rate' and self.input_value == '5M'):
-                            cell_list_keys = setup.range('B15:F15')
-                            cell_list_values = setup.range('B16:F16')
+                            cell_list_keys = self.sheet.range('B15:F15')
+                            cell_list_values = self.sheet.range('B16:F16')
                         elif (self.name == 'Rate' and self.input_value == '10M'):
-                            cell_list_keys = setup.range('B20:F20')
-                            cell_list_values = setup.range('B21:F21')
+                            cell_list_keys = self.sheet.range('B20:F20')
+                            cell_list_values = self.sheet.range('B21:F21')
                         else:
-                            cell_list_keys = setup.range('B5:F5')
-                            cell_list_values = setup.range('B6:F6')
+                            cell_list_keys = self.sheet.range('B5:F5')
+                            cell_list_values = self.sheet.range('B6:F6')
 
                         for cell, item in zip(cell_list_keys, list(values.keys())):
                             cell.value = item
-                        setup.update_cells(cell_list_keys)
+                        self.sheet.update_cells(cell_list_keys)
 
                         for cell, item in zip(cell_list_values, list(values.values())):
                             cell.value = item
-                        setup.update_cells(cell_list_values)
+                        self.sheet.update_cells(cell_list_values)
 
                     if (key == 'sum_received'):
                         logging.debug(list(values.keys()))
@@ -123,29 +141,29 @@ class Iperf3toGoogleSheets:
                         del values['end']
                         # del values['retransmits']
                         if (self.name == 'Rate' and self.input_value == '1M'):
-                            cell_list_keys = setup.range('B12:F12')
-                            cell_list_values = setup.range('B13:F13')
+                            cell_list_keys = self.sheet.range('B12:F12')
+                            cell_list_values = self.sheet.range('B13:F13')
                         elif (self.name == 'Rate' and self.input_value == '5M'):
-                            cell_list_keys = setup.range('B17:F17')
-                            cell_list_values = setup.range('B18:F18')
+                            cell_list_keys = self.sheet.range('B17:F17')
+                            cell_list_values = self.sheet.range('B18:F18')
                         elif (self.name == 'Rate' and self.input_value == '10M'):
-                            cell_list_keys = setup.range('B22:F22')
-                            cell_list_values = setup.range('B23:F23')
+                            cell_list_keys = self.sheet.range('B22:F22')
+                            cell_list_values = self.sheet.range('B23:F23')
                         else:
-                            cell_list_keys = setup.range('B7:F7')
-                            cell_list_values = setup.range('B8:F8')
+                            cell_list_keys = self.sheet.range('B7:F7')
+                            cell_list_values = self.sheet.range('B8:F8')
 
 
                         for cell, item in zip(cell_list_keys, list(values.keys())):
                             cell.value = item
-                        setup.update_cells(cell_list_keys)
+                        self.sheet.update_cells(cell_list_keys)
 
                         for cell, item in zip(cell_list_values, list(values.values())):
                             cell.value = item
-                        setup.update_cells(cell_list_values)
+                        self.sheet.update_cells(cell_list_values)
 
-    def data_manipulation_udp(self, setup):
-        for ka, va in self.iperf3_command_udp(cli_args().New_Value).items():
+    def data_manipulation_udp(self):
+        for ka, va in self.iperf3_command_udp(cli_args().Value).items():
             logging.debug(type(ka)) #str
             logging.debug(type(va)) #dict
             # myprint(va)
@@ -165,57 +183,63 @@ class Iperf3toGoogleSheets:
                         del values['packets']
                         del values['lost_percent']
                         if (self.name == 'Rate' and self.input_value == '1M'):
-                            cell_list_keys = setup.range('K10:S10')
-                            cell_list_values = setup.range('K11:S11')
+                            cell_list_keys = self.sheet.range('K10:S10')
+                            cell_list_values = self.sheet.range('K11:S11')
                         elif (self.name == 'Rate' and self.input_value == '5M'):
-                            cell_list_keys = setup.range('K15:S15')
-                            cell_list_values = setup.range('K16:S16')
+                            cell_list_keys = self.sheet.range('K15:S15')
+                            cell_list_values = self.sheet.range('K16:S16')
                         elif (self.name == 'Rate' and self.input_value == '10M'):
-                            cell_list_keys = setup.range('K20:S20')
-                            cell_list_values = setup.range('K21:S21')
+                            cell_list_keys = self.sheet.range('K20:S20')
+                            cell_list_values = self.sheet.range('K21:S21')
+                        # elif (self.name == 'Rate' and self.input_value != undefined and self.delay is v) :
+                        #     cell_list_keys = self.sheet.range('K20:S20')
+                        #     cell_list_values = self.sheet.range('K21:S21')
                         else:
-                            cell_list_keys = setup.range('K5:S5')
-                            cell_list_values = setup.range('K6:S6')
+                            cell_list_keys = self.sheet.range('K5:S5')
+                            cell_list_values = self.sheet.range('K6:S6')
 
                         for cell, item in zip(cell_list_keys, list(values.keys())):
                             cell.value = item
-                        setup.update_cells(cell_list_keys)
+                        self.sheet.update_cells(cell_list_keys)
 
-                        # cell_list_values = setup.range('A4:E4')
+                        # cell_list_values = self.sheet.range('A4:E4')
                         for cell, item in zip(cell_list_values, list(values.values())):
                             cell.value = item
-                        setup.update_cells(cell_list_values)
+                        self.sheet.update_cells(cell_list_values)
 
 def cli_args():
     parser = argparse.ArgumentParser()
-    name = parser.add_argument("--Name", required=False)
-    new_value = parser.add_argument('--New_Value', required=False)
+    Name = parser.add_argument("--Name", required=False)
+    Value = parser.add_argument('--Value', required=False)
+    Delay = parser.add_argument('--Delay', required=False)
     arg_inputs = parser.parse_args() 
     # logging.info("name arg -> %s", arg_inputs.Name)
-    # logging.info("new_value arg -> %s", arg_inputs.New_Value)
+    # logging.info("Value arg -> %s", arg_inputs.Value)
     return arg_inputs
 
 
 if __name__ == "__main__":
     # parser = argparse.ArgumentParser()
     # name = parser.add_argument("--Name", required=False)
-    # new_value = parser.add_argument('--New_Value', type=int, required=False)
+    # Value = parser.add_argument('--Value', type=int, required=False)
     # arg_inputs = parser.parse_args() 
     # logging.info("name arg -> %s", arg_inputs.Name)
     # cli_args
     # logging.info("name arg -> %s", cli_args().Name)
-    # logging.info("new_value arg -> %s", cli_args().New_Value)
+    # logging.info("Value arg -> %s", cli_args().Value)
     # tcgui_rules()
 
-    if (cli_args().Name and cli_args().New_Value):
-        instanceScript = Iperf3toGoogleSheets(cli_args().Name,cli_args().New_Value)
+    if (cli_args().Name and cli_args().Value and cli_args().Delay):
+        instanceScript = Iperf3toGoogleSheets(cli_args().Name,cli_args().Value, cli_args().Delay)
     else:
         instanceScript = Iperf3toGoogleSheets()
 
     # instanceScript = Iperf3toGoogleSheets()
-    instanceScript.connected(instanceScript.setup())
-    instanceScript.data_manipulation_tcp(instanceScript.setup())
-    instanceScript.data_manipulation_udp(instanceScript.setup())
+    instanceScript.setup()
+    # instanceScript.connected()
+    # instanceScript.tc_delay_command(cli_args().Delay)
+    instanceScript.data_manipulation_tcp()
+    instanceScript.data_manipulation_udp()
 
 
 # tasks TODO , think how to modularize code better
