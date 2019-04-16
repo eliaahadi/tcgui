@@ -69,8 +69,12 @@ $ sudo python3 main.py --ip 0.0.0.0 --debug
 - In another terminal for Mac OSX
 ```
 $ iperf3 -c ip -t 300
-$ iperf3 -c 192.168.5.166 -t 3 -J
-$ iperf3 -c 192.168.5.166 -t 3 -J -u 5M
+$ iperf3 -c 192.168.5.166 -t 3 -b 1MB
+$ iperf3 -c 192.168.5.166 -t 3 -J -u -b 5MB
 ```
 
 # add json from iperf3 into logfile/google sheets
+
+```
+$ python gsheet.py 
+```

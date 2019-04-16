@@ -34,8 +34,12 @@ class Iperf3toGoogleSheets:
 
 
 
-    def iperf3_command_tcp(self):
-        result = subprocess.run(["iperf3", "-c", "192.168.5.166", "-t", "3", "-J"],stdout=subprocess.PIPE)
+    def iperf3_command_tcp(self, bandwidth_rate):
+        # try:
+        #     bandwidth_rate
+        # except TypeError:
+        #     bandwidth_rate = '1000M'
+        result = subprocess.run(["iperf3", "-c", "192.168.5.166", "-t", "3", "-J", "-b", bandwidth_rate],stdout=subprocess.PIPE)
 
         dictjson = json.JSONDecoder().decode(result.stdout.decode('utf-8'))
         # logging.debug("TCP -> %s", dictjson)
@@ -75,119 +79,174 @@ class Iperf3toGoogleSheets:
         # iperf3_command()
         # self.connected()
         self.tc_delay_command()
-        for ka, va in self.iperf3_command_tcp().items():
-            logging.debug(type(ka)) #str
-            logging.debug(type(va)) #dict
-            # myprint(va)
-            if (isinstance(va, dict)):
-                for key,values in va.items():
-                    logging.debug(type(values)) #string
-                    logging.debug((key)) #string
-                    logging.debug((values)) #string
+        columndict = {'C':'1MB', 'D':'10MB', 'E':'50MB', 'F':'100MB', 'G':'1000MB'}
+        columnlist = ['C', 'D', 'E', 'F', 'G', 'H']
 
-                    if (key == 'connected'):
-                        connectedlist = values
-                        logging.debug(connectedlist)
-                        for conndict in values:
-                            cell_list_keys = self.sheet.range('B2:F2')
-                            cell_list_values = self.sheet.range('B3:F3')
+        
+        # del values['retransmits']
+        # if delay = i starting from 0, then cell sheet range is i*10 + 6
+        ratelist = ['1MB', '10MB', '50MB', '100MB', '1000MB']
+        delaylist = ['0ms', '100ms', '200ms', '300ms', '0ms']
+        
+        delaylist = []
+        for i in range(0, 1100, 100):
+            delaylist.append((str(i))+'ms')
+        logging.debug(delaylist)
+        if (self.delay == '0ms'):
+            # for i in range
+            increment_delay = '6'
+        else:
+            # logging.debug("delay variable -> %s", (int(self.delay[:-4])))
+            increment_delay = str(int(self.delay[:-4]) + 6)
+        if (self.name == 'Rate' and self.input_value == 'NA'):
+            for letter in columnlist:
+                logging.debug("letter value -> %s", letter)
+                for i in ratelist:
+                    logging.debug(((i[:-2]))) #<class 'str'>
+                    # logging.debug(type(cli_args().Value))
+                    for ka, va in self.iperf3_command_tcp(i).items():
+                        if (isinstance(va, dict)):
+                            for key,values in va.items():
+                                if (key == 'sum_received'):
+                                    bps = values['bits_per_second']
+                                    # logging.debug("delay value -> %s", increment_delay)
+                                    for columnkey, columnvalue in columndict.items():
+                                        if(columnkey == letter and columnvalue == i):
+                                            range_adder = letter + increment_delay + ':' + letter +  increment_delay
+                                            cell_list_values = self.sheet.range(range_adder)
+                                            logging.debug("cell_list_values -> %s", cell_list_values)
+                                            for cell, item in zip(cell_list_values, list(values.values())):
+                                                #values.values() 'bits_per_second':77222
+                                                cell.value = values['bits_per_second']
+                                                logging.debug("cell values -> %s", item)
+                                            self.sheet.update_cells(cell_list_values)
+        else:
+            for ka, va in self.iperf3_command_tcp(cli_args().Value).items():
+                logging.debug((cli_args().Value)) #str
+                logging.debug(type(va)) #dict
+                # myprint(va)
+                if (isinstance(va, dict)):
+                    for key,values in va.items():
+                        logging.debug(type(values)) #string
+                        logging.debug((key)) #string
+                        logging.debug((values)) #string
 
-                            for cell, item in zip(cell_list_keys, list(conndict.keys())):
-                                cell.value = item
-                            self.sheet.update_cells(cell_list_keys)
-                            for cell, item in zip(cell_list_values, list(conndict.values())):
-                                cell.value = item
-                            self.sheet.update_cells(cell_list_values)
+                        if (key == 'connected'):
+                            connectedlist = values
+                            logging.debug(connectedlist)
+                            for conndict in values:
+                                cell_list_keys = self.sheet.range('B2:F2')
+                                cell_list_values = self.sheet.range('B3:F3')
+
+                                for cell, item in zip(cell_list_keys, list(conndict.keys())):
+                                    cell.value = item
+                                self.sheet.update_cells(cell_list_keys)
+                                for cell, item in zip(cell_list_values, list(conndict.values())):
+                                    cell.value = item
+                                self.sheet.update_cells(cell_list_values)
 
 
-                    # if (key == 'sum_sent'):
-                    #     sumsent = values
-                    #     del values['start']
-                    #     del values['end']
-                    #     del values['retransmits']
-                    #     logging.debug(values)
-                    #     # for self.delay = 0 to 1ms:
+                        # if (key == 'sum_sent'):
+                        #     sumsent = values
+                        #     del values['start']
+                        #     del values['end']
+                        #     del values['retransmits']
+                        #     logging.debug(values)
+                        #     # for self.delay = 0 to 1ms:
 
-                    #     if (self.name == 'Rate' and self.input_value == '1M'):
-                    #         # cell_list_keys = self.sheet.range('B10:F10')
-                    #         cell_list_values = self.sheet.range('B11:F11')
-                    #     elif (self.name == 'Rate' and self.input_value == '10M'):
-                    #         # cell_list_keys = self.sheet.range('B15:F15')
-                    #         cell_list_values = self.sheet.range('B16:F16')
-                    #     elif (self.name == 'Rate' and self.input_value == '50M'):
-                    #         # cell_list_keys = self.sheet.range('B15:F15')
-                    #         cell_list_values = self.sheet.range('B16:F16')
-                    #     elif (self.name == 'Rate' and self.input_value == '100M'):
-                    #         # cell_list_keys = self.sheet.range('B15:F15')
-                    #         cell_list_values = self.sheet.range('B16:F16')
-                    #     elif (self.name == 'Rate' and self.input_value == '1000M'):
-                    #         # cell_list_keys = self.sheet.range('B20:F20')
-                    #         cell_list_values = self.sheet.range('B21:F21')
-                    #     else:
-                    #         # cell_list_keys = self.sheet.range('B5:F5')
-                    #         cell_list_values = self.sheet.range('B6:F6')
+                        #     if (self.name == 'Rate' and self.input_value == '1M'):
+                        #         # cell_list_keys = self.sheet.range('B10:F10')
+                        #         cell_list_values = self.sheet.range('B11:F11')
+                        #     elif (self.name == 'Rate' and self.input_value == '10M'):
+                        #         # cell_list_keys = self.sheet.range('B15:F15')
+                        #         cell_list_values = self.sheet.range('B16:F16')
+                        #     elif (self.name == 'Rate' and self.input_value == '50M'):
+                        #         # cell_list_keys = self.sheet.range('B15:F15')
+                        #         cell_list_values = self.sheet.range('B16:F16')
+                        #     elif (self.name == 'Rate' and self.input_value == '100M'):
+                        #         # cell_list_keys = self.sheet.range('B15:F15')
+                        #         cell_list_values = self.sheet.range('B16:F16')
+                        #     elif (self.name == 'Rate' and self.input_value == '1000M'):
+                        #         # cell_list_keys = self.sheet.range('B20:F20')
+                        #         cell_list_values = self.sheet.range('B21:F21')
+                        #     else:
+                        #         # cell_list_keys = self.sheet.range('B5:F5')
+                        #         cell_list_values = self.sheet.range('B6:F6')
 
-                    #     for cell, item in zip(cell_list_keys, list(values.keys())):
-                    #         cell.value = item
-                    #     self.sheet.update_cells(cell_list_keys)
+                        #     for cell, item in zip(cell_list_keys, list(values.keys())):
+                        #         cell.value = item
+                        #     self.sheet.update_cells(cell_list_keys)
 
-                    #     for cell, item in zip(cell_list_values, list(values.values())):
-                    #         cell.value = item
-                    #     self.sheet.update_cells(cell_list_values)
+                        #     for cell, item in zip(cell_list_values, list(values.values())):
+                        #         cell.value = item
+                        #     self.sheet.update_cells(cell_list_values)
 
-                    if (key == 'sum_received'):
-                        logging.debug(list(values.keys()))
-                        logging.debug(values['bits_per_second'])
-                        del values['start']
-                        del values['end']
-                        bps = values['bits_per_second']
-                        # del values['retransmits']
-                        # if delay = i starting from 0, then cell sheet range is i*10 + 6
-                        ratelist = ['1M', '10M', '50M', '100M', '1000M']
-                        # delaylist = ['0ms', '100ms', '200ms', '300ms', '0ms']
-                        delaylist = []
-                        for i in range(0, 1100, 100):
-                            delaylist.append((str(i))+'ms')
-                        logging.debug(delaylist)
-                        if (self.delay == '0ms'):
-                            # for i in range
-                            increment_delay = '6'
-                        else:
-                            # logging.debug("delay variable -> %s", (int(self.delay[:-4])))
-                            increment_delay = str(int(self.delay[:-4]) + 6)
-                        if (self.name == 'Rate' and self.input_value == '1M'):
-                            range_adder = 'C' + increment_delay + ':C' +  increment_delay
-                            cell_list_values = self.sheet.range(range_adder)
-                        elif (self.name == 'Rate' and self.input_value == '10M'):
-                            range_adder = 'D' + increment_delay + ':D' +  increment_delay
-                            cell_list_values = self.sheet.range(range_adder)
-                        elif (self.name == 'Rate' and self.input_value == '50M'):
-                            range_adder = 'E' + increment_delay + ':E' +  increment_delay
-                            cell_list_values = self.sheet.range(range_adder)
-                        elif (self.name == 'Rate' and self.input_value == '100M'):
-                            range_adder = 'F' + increment_delay + ':F' +  increment_delay
-                            cell_list_values = self.sheet.range(range_adder)
-                        elif (self.name == 'Rate' and self.input_value == '1000M'):
-                            range_adder = 'G' + increment_delay + ':G' +  increment_delay
-                            cell_list_values = self.sheet.range(range_adder)
-                        elif (self.name == 'Rate' and self.input_value == 'NA'):
-                            for i in ratelist:
+                        if (key == 'sum_received'):
+                            logging.debug(list(values.keys()))
+                            logging.debug(values['bits_per_second'])
+                            del values['start']
+                            del values['end']
+                            bps = values['bits_per_second']
+                            # if (self.delay == '0ms'):
+                            #     # for i in range
+                            #     increment_delay = '6'
+                            # else:
+                            #     # logging.debug("delay variable -> %s", (int(self.delay[:-4])))
+                            #     increment_delay = str(int(self.delay[:-4]) + 6)
+                            
+                            if (self.name == 'Rate' and self.input_value == '1MB'):
+                                range_adder = 'C' + increment_delay + ':C' +  increment_delay
+                                cell_list_values = self.sheet.range(range_adder)
+                            elif (self.name == 'Rate' and self.input_value == '10MB'):
+                                range_adder = 'D' + increment_delay + ':D' +  increment_delay
+                                cell_list_values = self.sheet.range(range_adder)
+                            elif (self.name == 'Rate' and self.input_value == '50MB'):
+                                range_adder = 'E' + increment_delay + ':E' +  increment_delay
+                                cell_list_values = self.sheet.range(range_adder)
+                            elif (self.name == 'Rate' and self.input_value == '100MB'):
+                                range_adder = 'F' + increment_delay + ':F' +  increment_delay
+                                cell_list_values = self.sheet.range(range_adder)
+                            elif (self.name == 'Rate' and self.input_value == '1000MB'):
                                 range_adder = 'G' + increment_delay + ':G' +  increment_delay
                                 cell_list_values = self.sheet.range(range_adder)
-                        else:
-                            range_adder = 'H' + increment_delay + ':H' +  increment_delay
-                            cell_list_values = self.sheet.range(range_adder)
+                            # elif (self.name == 'Rate' and self.input_value == 'NA'):
+                            #     for letter in columnlist:
+                            #         logging.debug("letter value -> %s", letter)
+                            #         for i in ratelist:
+                            #             logging.debug(((i[:-2])))
+                            #             # logging.debug(type(cli_args().Value))
+                            #             for ka, va in self.iperf3_command_tcp(i[:-2]).items():
+                            #                 if (isinstance(va, dict)):
+                            #                     for key,values in va.items():
+                            #                         if (key == 'sum_received'):
+                            #                                 # logging.debug("delay value -> %s", increment_delay)
+                            #                                 for columnkey, columnvalue in columndict.items():
+                            #                                     if(columnkey == letter):
+                            #                                         range_adder = letter + increment_delay + ':' + letter +  increment_delay
+                            #                                         cell_list_values = self.sheet.range(range_adder)
+                            #                                         logging.debug("cell_list_values -> %s", cell_list_values)
+                            #                                         for cell, item in zip(cell_list_values, list(values.values())):
+                            #                                             #values.values() 'bits_per_second':77222
+                            #                                             cell.value = values['bits_per_second']
+                            #                                             logging.debug("cell values -> %s", item)
+                            #                                         self.sheet.update_cells(cell_list_values)
+
+                            else:
+                                range_adder = 'H' + increment_delay + ':H' +  increment_delay
+                                cell_list_values = self.sheet.range(range_adder)
 
 
-                        # for cell, item in zip(cell_list_keys, list(values.keys())):
-                        #     cell.value = item
-                        # self.sheet.update_cells(cell_list_keys)
+                            # for cell, item in zip(cell_list_keys, list(values.keys())):
+                            #     cell.value = item
+                            # self.sheet.update_cells(cell_list_keys)
 
-                        logging.debug("BPS values -> %s", bps)
-                        for cell, item in zip(cell_list_values, list(values.values())):
-                            cell.value = bps
-                            logging.debug("cell values -> %s", item)
-                        self.sheet.update_cells(cell_list_values)
+                            logging.debug("BPS values -> %s", bps)
+                            if (self.input_value != 'NA'):
+                                for cell, item in zip(cell_list_values, list(values.values())):
+                                    #values.values() 'bits_per_second':1081110.0
+                                    cell.value = bps
+                                    logging.debug("cell values -> %s", item)
+                                self.sheet.update_cells(cell_list_values)
 
     def data_manipulation_udp(self):
         for ka, va in self.iperf3_command_udp(cli_args().Value).items():
@@ -270,9 +329,4 @@ if __name__ == "__main__":
     # instanceScript.tc_delay_command(cli_args().Delay)
     instanceScript.data_manipulation_tcp()
     instanceScript.data_manipulation_udp()
-
-
-# tasks TODO , think how to modularize code better
-# break up if/else statements into one function with the inputs mapped to different sheet cells
-
 
