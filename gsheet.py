@@ -43,7 +43,13 @@ class Iperf3toGoogleSheets:
         #     bandwidth_rate
         # except TypeError:
         #     bandwidth_rate = '1000M'
-        result = subprocess.run(["iperf3", "-c", "192.168.5.166", "-t", "3", "-J", "-b", bandwidth_rate],stdout=subprocess.PIPE)
+
+        try:
+            tested_bandwidth_rate = float(bandwidth_rate[:-2])
+            tested_bandwidth_rate = str(bandwidth_rate)
+        except ValueError:
+            tested_bandwidth_rate = '1000MB'
+        result = subprocess.run(["iperf3", "-c", "192.168.5.166", "-t", "3", "-J", "-b", tested_bandwidth_rate],stdout=subprocess.PIPE)
 
         dictjson = json.JSONDecoder().decode(result.stdout.decode('utf-8'))
         # Log.debug("TCP -> %s", dictjson)
@@ -51,13 +57,21 @@ class Iperf3toGoogleSheets:
 
 
     def iperf3_command_udp(self, bandwidth_rate):
+        # try:
+        #     bandwidth_rate
+        # except TypeError:
+        #     bandwidth_rate = '1MB'
+
         try:
-            bandwidth_rate
-        except TypeError:
-            bandwidth_rate = '1M'
+            tested_bandwidth_rate = float(bandwidth_rate[:-2])
+            tested_bandwidth_rate = str(bandwidth_rate)
+            # self.sheet.update_acell('E19', float(cli_args().Value[:-2]))
+        except ValueError:
+            tested_bandwidth_rate = '1MB'
+
         # if (!bandwidth_rate):
         #     bandwidth_rate = '1M'
-        result = subprocess.run(["iperf3", "-c", "192.168.5.166", "-t", "3", "-J", "-u", "-b", bandwidth_rate],stdout=subprocess.PIPE)
+        result = subprocess.run(["iperf3", "-c", "192.168.5.166", "-t", "3", "-J", "-u", "-b", tested_bandwidth_rate],stdout=subprocess.PIPE)
 
         dictjson = json.JSONDecoder().decode(result.stdout.decode('utf-8'))
         Log.info("udp -> %s", bandwidth_rate)
@@ -65,16 +79,20 @@ class Iperf3toGoogleSheets:
         return dictjson
 
     def tc_delay_command(self):
-        try:
-            self.delay
-        except TypeError:
-            self.delay = '0ms'
+        # try:
+        #     self.delay
+        # except TypeError:
+        #     self.delay = '0ms'
         
-
+        try:
+            tested_delay = float(self.delay[:-2])
+            tested_delay = self.delay
+        except ValueError:
+            tested_delay = '0ms'
         Log.debug("BEFORE delay -> %s", self.delay)
 
         result = subprocess.run(["sudo", "tc", "qdisc", "add", "dev", "enp4s0", "root", "netem", "delay", "0ms"],stdout=subprocess.PIPE)
-        result = subprocess.run(["sudo", "tc", "qdisc", "change", "dev", "enp4s0", "root", "netem", "delay", self.delay],stdout=subprocess.PIPE)
+        result = subprocess.run(["sudo", "tc", "qdisc", "change", "dev", "enp4s0", "root", "netem", "delay", tested_delay],stdout=subprocess.PIPE)
 
         # tc_dictjson = json.JSONDecoder().decode(result.stdout.decode('utf-8'))
         Log.debug("result -> %s", result)
@@ -83,7 +101,7 @@ class Iperf3toGoogleSheets:
     def data_manipulation_tcp(self):
         # iperf3_command()
         # self.connected()
-        self.tc_delay_command()
+        # self.tc_delay_command()
         columndict = {'C':'1MB', 'D':'10MB', 'E':'50MB', 'F':'100MB', 'G':'1000MB'}
         columnlist = ['C', 'D', 'E', 'F', 'G', 'H']
 
@@ -91,7 +109,6 @@ class Iperf3toGoogleSheets:
         # del values['retransmits']
         # if delay = i starting from 0, then cell sheet range is i*10 + 6
         ratelist = ['1MB', '10MB', '50MB', '100MB', '1000MB']
-        delaylist = ['0ms', '100ms', '200ms', '300ms', '0ms']
         
         delaylist = []
         for i in range(0, 1100, 100):
@@ -101,22 +118,28 @@ class Iperf3toGoogleSheets:
             # for i in range
             increment_delay = '6'
         else:
-            # Log.debug("delay variable -> %s", (int(self.delay[:-4])))
-            increment_delay = str(int(self.delay[:-4]) + 6)
+            Log.info("delay variable -> %s", delaylist.__contains__(self.delay))
+            # for k in delaylist:
+            #     if (int(k))
+            if(delaylist.__contains__(self.delay)):
+                increment_delay = str(int(self.delay[:-4]) + 6)
+            else:
+                increment_delay = '17'
+            Log.info("TCP increment variable -> %s", increment_delay)
         if (self.name == 'Rate' and self.input_value == 'NA'):
             for letter in columnlist:
                 Log.info("letter value -> %s", letter)
                 for i in ratelist:
                     Log.info(((i[:-2]))) #<class 'str'>
                     # Log.debug(type(cli_args().Value))
-                    for ka, va in self.iperf3_command_tcp(i).items():
-                        if (isinstance(va, dict)):
-                            for key,values in va.items():
-                                if (key == 'sum_received'):
-                                    bps = values['bits_per_second']
-                                    # Log.debug("delay value -> %s", increment_delay)
-                                    for columnkey, columnvalue in columndict.items():
-                                        if(columnkey == letter and columnvalue == i):
+                    for columnkey, columnvalue in columndict.items():
+                        if(columnkey == letter and columnvalue == i):
+                            for ka, va in self.iperf3_command_tcp(i).items():
+                                if (isinstance(va, dict)):
+                                    for key,values in va.items():
+                                        if (key == 'sum_received'):
+                                            bps = values['bits_per_second']
+                                            # Log.debug("delay value -> %s", increment_delay)
                                             range_adder = letter + increment_delay + ':' + letter +  increment_delay
                                             cell_list_values = self.sheet.range(range_adder)
                                             Log.debug("cell_list_values -> %s", cell_list_values)
@@ -192,11 +215,10 @@ class Iperf3toGoogleSheets:
 
     def data_manipulation_udp(self):
 
-        self.tc_delay_command()
+        # self.tc_delay_command()
         columndict = {'I':'1MB', 'J':'10MB', 'K':'50MB', 'L':'100MB', 'M':'1000MB'}
         columnlist = ['I', 'J', 'K', 'L', 'M', 'N']
         ratelist = ['1MB', '10MB', '50MB', '100MB', '1000MB']
-        delaylist = ['0ms', '100ms', '200ms', '300ms', '0ms']
         
         delaylist = []
         for i in range(0, 1100, 100):
@@ -205,29 +227,33 @@ class Iperf3toGoogleSheets:
         if (self.delay == '0ms'):
             increment_delay = '6'
         else:
-            # Log.debug("delay variable -> %s", (int(self.delay[:-4])))
-            increment_delay = str(int(self.delay[:-4]) + 6)
+            if(delaylist.__contains__(self.delay)):
+                increment_delay = str(int(self.delay[:-4]) + 6)
+            else:
+                increment_delay = '17'
+            # increment_delay = str(int(self.delay[:-4]) + 6)
+            Log.info("UDP increment variable -> %s", increment_delay)
         if (self.name == 'Rate' and self.input_value == 'NA'):
             for letter in columnlist:
                 Log.info("letter value -> %s", letter)
                 for i in ratelist:
                     Log.debug(((i[:-2]))) #<class 'str'>
                     # Log.debug(type(cli_args().Value))
-                    for ka, va in self.iperf3_command_udp(i).items():
-                        if (isinstance(va, dict)):
-                            for key,values in va.items():
-                                if (key == 'sum'):
-                                    bps = values['bits_per_second']
-                                    del values['start']
-                                    del values['end']
-                                    # del values['seconds']
-                                    del values['jitter_ms']
-                                    del values['lost_packets']
-                                    del values['packets']
-                                    del values['lost_percent']
-                                    # Log.debug("delay value -> %s", increment_delay)
-                                    for columnkey, columnvalue in columndict.items():
-                                        if(columnkey == letter and columnvalue == i):
+                    for columnkey, columnvalue in columndict.items():
+                        if(columnkey == letter and columnvalue == i):
+                            for ka, va in self.iperf3_command_udp(i).items():
+                                if (isinstance(va, dict)):
+                                    for key,values in va.items():
+                                        if (key == 'sum'):
+                                            bps = values['bits_per_second']
+                                            del values['start']
+                                            del values['end']
+                                            # del values['seconds']
+                                            del values['jitter_ms']
+                                            del values['lost_packets']
+                                            del values['packets']
+                                            del values['lost_percent']
+                                            # Log.debug("delay value -> %s", increment_delay)
                                             range_adder = letter + increment_delay + ':' + letter +  increment_delay
                                             cell_list_values = self.sheet.range(range_adder)
                                             Log.debug("cell_list_values -> %s", cell_list_values)
@@ -275,32 +301,65 @@ class Iperf3toGoogleSheets:
                                 range_adder = 'N' + increment_delay + ':N' +  increment_delay
                                 cell_list_values = self.sheet.range(range_adder)
 
-
-
-                            # if (self.name == 'Rate' and self.input_value == '1M'):
-                            #     cell_list_keys = self.sheet.range('K10:S10')
-                            #     cell_list_values = self.sheet.range('K11:S11')
-                            # elif (self.name == 'Rate' and self.input_value == '5M'):
-                            #     cell_list_keys = self.sheet.range('K15:S15')
-                            #     cell_list_values = self.sheet.range('K16:S16')
-                            # elif (self.name == 'Rate' and self.input_value == '10M'):
-                            #     cell_list_keys = self.sheet.range('K20:S20')
-                            #     cell_list_values = self.sheet.range('K21:S21')
-                            # # elif (self.name == 'Rate' and self.input_value != undefined and self.delay is v) :
-                            # #     cell_list_keys = self.sheet.range('K20:S20')
-                            # #     cell_list_values = self.sheet.range('K21:S21')
-                            # else:
-                            #     cell_list_keys = self.sheet.range('K5:S5')
-                            #     cell_list_values = self.sheet.range('K6:S6')
-
-                            # for cell, item in zip(cell_list_keys, list(values.keys())):
-                            #     cell.value = item
-                            # self.sheet.update_cells(cell_list_keys)
-
-                            # cell_list_values = self.sheet.range('A4:E4')
                             for cell, item in zip(cell_list_values, list(values.values())):
                                 cell.value = sumsent['bits_per_second']
                             self.sheet.update_cells(cell_list_values)
+                            if (self.delay not in delaylist and cli_args().Value not in ratelist):
+                                Log.info("rate value -> %s", cli_args().Value)
+                                Log.info("delay values -> %s", self.delay)
+                                Log.info("cell_list values -> %s",cell_list_values)
+                                # self.sheet.update_cells('B20', 'test')
+                                # self.sheet.update_acell('B23', 'Bingo!')
+                                # if 
+                                try:
+                                    input_rate = float(cli_args().Value[:-2])
+                                    self.sheet.update_acell('E19', float(cli_args().Value[:-2]))
+                                except ValueError:
+                                    self.sheet.update_acell('E19', '1MB')
+
+                                try:
+                                    input_delay = float(self.delay[:-2])
+                                    self.sheet.update_acell('G19', float(self.delay[:-2]))
+                                except ValueError:
+                                    self.sheet.update_acell('G19', '0ms')
+                            
+                            elif (self.delay not in delaylist or cli_args().Value in ratelist):
+                                Log.info("rate value -> %s", cli_args().Value)
+                                Log.info("delay values -> %s", self.delay)
+                                Log.info("cell_list values -> %s",cell_list_values)
+                                # self.sheet.update_cells('B20', 'test')
+                                # self.sheet.update_acell('B23', 'Bingo!')
+                                # self.sheet.update_acell('B19', str(cli_args().Value))
+                                try:
+                                    input_delay = float(self.delay[:-2])
+                                    self.sheet.update_acell('B17', float(self.delay[:-2]))
+                                except ValueError:
+                                # if ((float(cli_args().Value[:-2])) is not float):
+                                # else:
+                                    self.sheet.update_acell('B17', '0ms')
+                                    # self.sheet.update_acell('N5', 'unlimited')
+
+
+
+                                
+                            elif (self.delay in delaylist or cli_args().Value not in ratelist):
+                                Log.info("rate value -> %s", (cli_args().Value[:-2]))
+                                Log.info("delay values -> %s", self.delay)
+                                Log.info("cell_list values -> %s",cell_list_values)
+                                # self.sheet.update_cells('B20', 'test')
+                                # self.sheet.update_acell('B23', 'Bingo!')
+                                try:
+                                    input_rate = float(cli_args().Value[:-2])
+                                    self.sheet.update_acell('H5', input_rate)
+                                    self.sheet.update_acell('N5', input_rate)
+                                except ValueError:
+                                # if ((float(cli_args().Value[:-2])) is not float):
+                                # else:
+                                    self.sheet.update_acell('H5', '1MB')
+                                    self.sheet.update_acell('N5', 'unlimited')
+                                # self.sheet.update_acell('B17', str(self.delay))
+
+
 
 def cli_args():
     parser = argparse.ArgumentParser()
@@ -334,6 +393,7 @@ if __name__ == "__main__":
 
     # instanceScript = Iperf3toGoogleSheets()
     instanceScript.setup()
+    instanceScript.tc_delay_command()
     # instanceScript.connected()
     # instanceScript.tc_delay_command(cli_args().Delay)
     instanceScript.data_manipulation_tcp()
