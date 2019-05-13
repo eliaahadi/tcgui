@@ -55,3 +55,10 @@ $ iperf3 -s
 - The UDP graph below shows trends the different delay colored values when the delay is higher, the BPS seems unaffected. The biggest effects are the rate condition, the higher it is set, the more BPS is sent. Implementing a delay may have no effect since there isn't much of a requirement for syn and ack unlike it is for TCP data transfer, so data can be sent more freely with UDP.
 
 ![UDP](UDP_chart.png)
+
+## Future Work
+- More tests planned for different computer configurations.
+
+## References
+- [Traffic Control GUI](https://github.com/tum-lkn/tcgui)
+- [Build router with Ubuntu](https://www.ascinc.com/blog/linux/how-to-build-a-simple-router-with-ubuntu-server-18-04-1-lts-bionic-beaver/)
