@@ -46,4 +46,12 @@ $ iperf3 -s
 
 
 ## Summary of test data
-- From XCY Mini PC to Office Computer using same router, the graph shows with rate as x variable and bits per second (bps) as y variable in graph.
+- From XCY Mini PC to Office Computer using same router, two sets of data were collected. The results show comparison between Transmission Control Protocol (TCP) and User Datagram Protocol (UDP) with two different graphs. 
+- The graph data shows rate values from 1 megabyte (MB), 10 MB, 50 MB, 100 MB, and to 1000 MB (1 GB) as the X values and bits per second values as the Y values. Each line corresponds to delay values ranging from 0 milliseconds (ms) to 1000 ms in increments of 100 ms. 
+- The TCP graph below shows trends the different delay colored values when the delay is higher, less BPS data is transmitted as expected. 0ms and 100 ms delay were quite large in BPS transmission, however, 200 ms and higher delay, under 1,000,000 BPS were transmitted. The possible reason for these differences that sending a sync (syn), syn acknowledge (ack), ack with a larger delay dramatically reducing the BPS since lots of wait time incurs.
+
+![TCP](TCP_chart.png)
+
+- The UDP graph below shows trends the different delay colored values when the delay is higher, the BPS seems unaffected. The biggest effects are the rate condition, the higher it is set, the more BPS is sent. Implementing a delay may have no effect since there isn't much of a requirement for syn and ack unlike it is for TCP data transfer, so data can be sent more freely with UDP.
+
+![UDP](UDP_chart.png)
